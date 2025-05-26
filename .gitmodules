@@ -1,0 +1,3 @@
+[submodule "commonoplib"]
+	path = commonoplib
+	url = git@github-g03-hunterlarcuad:hunterlarcuad/commonoplib.git
