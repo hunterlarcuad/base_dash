@@ -1,5 +1,6 @@
 venv
 conf.py
+base_conf.py
 *.log
 *.pyc
 datas
