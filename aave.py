@@ -31,6 +31,7 @@ from base_conf import (
     DEF_DING_TOKEN,
     DEF_PATH_DATA_STATUS,
     DEF_FILE_STATUS,
+    DEF_FILE_STATUS_HISTORY,
     DEF_URL_AAVE,
     DEF_BALANCE_KEEP_GAS_ETH,
     DEF_SUPPLY_MIN_ETH,
@@ -83,11 +84,22 @@ class ClsAave():
         self.is_update = False
 
     def __del__(self):
-        pass
-        # self.status_save()
+        # 将当前 profile 对应的记录追加到 status_history
+        if (hasattr(self, 'args') and hasattr(self, 'dic_status') and 
+            hasattr(self, 'file_status_history') and self.is_update):
+            if self.args.s_profile in self.dic_status:
+                profile_status = {self.args.s_profile: self.dic_status[self.args.s_profile]}
+                save2file(
+                    file_ot=self.file_status_history,
+                    dic_status=profile_status,
+                    idx_key=0,
+                    header=self.DEF_HEADER_STATUS,
+                    mode='a'  # 追加模式
+                )
 
     def get_status_file(self):
         self.file_status = f'{DEF_PATH_DATA_STATUS}/{DEF_FILE_STATUS}'
+        self.file_status_history = f'{DEF_PATH_DATA_STATUS}/{DEF_FILE_STATUS_HISTORY}'
 
     def status_load(self):
         if self.file_status is None:
@@ -211,7 +223,7 @@ class ClsAave():
             if not isinstance(ele_blk, NoneElement):
                 lst_path = [
                     '@@tag()=button@@class:MuiButtonBase-root MuiButton-root MuiButton-gradient MuiButton-gradientPrimary MuiButton-sizeMedium MuiButton-gradientSizeMedium MuiButton-colorPrimary MuiButton-disableElevation MuiButton-root MuiButton-gradient MuiButton-gradientPrimary MuiButton-sizeMedium MuiButton-gradientSizeMedium MuiButton-colorPrimary MuiButton-disableElevation css', # before login
-                    '@@tag()=button@@class:MuiButtonBase-root MuiButton-root MuiButton-surface MuiButton-surfacePrimary MuiButton-sizeMedium MuiButton-surfaceSizeMedium MuiButton-colorPrimary MuiButton-disableElevation MuiButton-root MuiButton-surface MuiButton-surfacePrimary MuiButton-sizeMedium MuiButton-surfaceSizeMedium MuiButton-colorPrimary MuiButton-disableElevation css', # after login
+                    '@@tag()=p@@class:MuiTypography-root MuiTypography-buttonM', # after login
                 ]
                 ele_btn = self.inst_dp.get_ele_btn(ele_blk, lst_path)
                 if ele_btn is not NoneElement:
@@ -237,6 +249,8 @@ class ClsAave():
                         if self.inst_okx.wait_popup(n_tab+1, 10):
                             tab.wait(2)
                             self.inst_okx.okx_connect()
+                            self.inst_okx.wait_popup(n_tab, 10)
+                            tab.wait(2)
                     else:
                         self.logit(None, 'Log in success')
                         return True
@@ -354,8 +368,8 @@ class ClsAave():
 
                         # f_amount = f_balance - DEF_BALANCE_KEEP_GAS_ETH
                         # f_balance 是预留 gas 后的余额
-                        # f_balance 保留 6 位小数，向下取整
-                        f_amount = math.floor(f_balance * 1000000) / 1000000
+                        # f_balance 保留 5 位小数，向下取整
+                        f_amount = math.floor(f_balance * 100000) / 100000
                         if f_amount < DEF_SUPPLY_MIN_ETH:
                             self.logit(
                                 None,
@@ -374,9 +388,10 @@ class ClsAave():
                             tab.wait(1)
                             ele_input.clear(by_js=True)
                             tab.wait(1)
-                            tab.actions.move_to(ele_input).click().type(f_amount) # noqa
+                            tab.actions.move_to(ele_input).click().type(str(f_amount)) # noqa
                             tab.wait(1)
                             if ele_input.value != str(f_amount):
+                                self.logit(None, f'Input amount error: {ele_input.value} != {f_amount}')
                                 continue
 
                         # Submit: Supply ETH
@@ -425,7 +440,7 @@ class ClsAave():
             if not isinstance(ele_info, NoneElement):
                 # eg: 0.0061176
                 s_info = ele_info.text
-                self.logit(None, f'Your supplies [ETH]: {s_info}')
+                self.logit('get_supply_amount', f'ETH Amount: {s_info}')
                 f_supply_amount = float(s_info)
         return f_supply_amount
 
@@ -463,6 +478,7 @@ class ClsAave():
         if self.connect_wallet() is False:
             self.logit('aave_process', 'Connect wallet failed')
             return False
+        self.logit(None, 'Connect wallet success')
 
         if self.select_base_market() is False:
             self.logit('aave_process', 'Select base market failed')
