@@ -84,18 +84,7 @@ class ClsAave():
         self.is_update = False
 
     def __del__(self):
-        # 将当前 profile 对应的记录追加到 status_history
-        if (hasattr(self, 'args') and hasattr(self, 'dic_status') and 
-            hasattr(self, 'file_status_history') and self.is_update):
-            if self.args.s_profile in self.dic_status:
-                profile_status = {self.args.s_profile: self.dic_status[self.args.s_profile]}
-                save2file(
-                    file_ot=self.file_status_history,
-                    dic_status=profile_status,
-                    idx_key=0,
-                    header=self.DEF_HEADER_STATUS,
-                    mode='a'  # 追加模式
-                )
+        pass
 
     def get_status_file(self):
         self.file_status = f'{DEF_PATH_DATA_STATUS}/{DEF_FILE_STATUS}'
@@ -379,7 +368,7 @@ class ClsAave():
                                 self.status_index.STATUS,
                                 DEF_INSUFFICIENT_ETH
                             )
-                            return DEF_SUCCESS
+                            return DEF_INSUFFICIENT_ETH
 
                         # Input Amount
                         ele_input = ele_amount_blk.ele('@@tag()=input@@inputmode=numeric', timeout=2)
@@ -544,6 +533,21 @@ class ClsAave():
         self.logit('aave_run', 'Finished!')
 
         return True
+
+    def save_to_history(self):
+        """将当前 profile 对应的记录追加到 status_history"""
+        if (hasattr(self, 'args') and hasattr(self, 'dic_status') and 
+            hasattr(self, 'file_status_history') and self.is_update):
+            if self.args.s_profile in self.dic_status:
+                profile_status = {self.args.s_profile: self.dic_status[self.args.s_profile]}
+                save2file(
+                    file_ot=self.file_status_history,
+                    dic_status=profile_status,
+                    idx_key=0,
+                    header=self.DEF_HEADER_STATUS,
+                    mode='a'  # 追加模式
+                )
+                self.logit('save_to_history', f'Saved to history for {self.args.s_profile}')
 
 
 def send_msg(inst_aave, lst_success):
@@ -729,6 +733,9 @@ def main(args):
                 inst_aave.close()
                 if j < max_try_except:
                     time.sleep(5)
+
+        # 处理完当前 profile 后，保存到历史记录
+        inst_aave.save_to_history()
 
         if inst_aave.is_update is False:
             continue
